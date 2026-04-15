@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  IMPORTER
+  CLIENT
+}
+
+enum SourcePlatform {
+  MOBILE_DE
+  AUTOSCOUT24
+  OTHER
+}
+
+enum DeliveryMode {
+  PICKUP
+  DELIVERY
+}
+
+enum BuyerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum RequestStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id              String           @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String           @unique
+  passwordHash    String
+  role            Role
+  phone           String?
+  whatsapp        String?
+  importerProfile ImporterProfile?
+  clientProfile   ClientProfile?
+  clientRequests  Request[]        @relation("ClientRequests")
+  importerRequests Request[]       @relation("ImporterRequests")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model ImporterProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  companyName        String
+  slug               String   @unique
+  bio                String
+  coveredCountries   String[]
+  servicesOffered    String[]
+  languagesSpoken    String[]
+  isVerified         Boolean  @default(false)
+  publicContactEmail String?
+  publicWhatsapp     String?
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests           Request[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ClientProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  preferredLanguage String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Request {
+  id                  String         @id @default(cuid())
+  clientId            String
+  importerId          String?
+  sourceUrl           String
+  sourcePlatform      SourcePlatform
+  vehicleTitle        String
+  vehiclePrice        Decimal        @db.Decimal(12, 2)
+  vehicleCurrency     String
+  destinationCountry  String
+  deliveryMode        DeliveryMode
+  buyerType           BuyerType
+  wantsCustomsSupport Boolean        @default(false)
+  status              RequestStatus  @default(DRAFT)
+  client              User           @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
+  importer            ImporterProfile? @relation(fields: [importerId], references: [id], onDelete: SetNull)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+}
